@@ -71,6 +71,7 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
   ros::Publisher pubCovCoreAux_; ///< Publishes the covariance matrix for the cross-correlations between core and auxiliary states.
 
   std::string msf_output_frame_;
+  int n_suspended_packs_;
 
   mutable tf::TransformBroadcaster tf_broadcaster_;
 
@@ -87,7 +88,7 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
 
     pnh.param("data_playback", this->data_playback_, false);
     pnh.param("msf_output_frame", msf_output_frame_, std::string("world"));
-
+    pnh.param("n_suspended_packs", this->n_suspended_packs_, 100);
     ros::NodeHandle nh("msf_core");
 
     pubState_ = nh.advertise < sensor_fusion_comm::DoubleArrayStamped
@@ -208,7 +209,9 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
       msgPose.header.seq = msg_seq++;
       msgPose.header.frame_id = msf_output_frame_;
       state->ToPoseMsg(msgPose);
-      pubPose_.publish(msgPose);
+      if(msg_seq > n_suspended_packs_)
+      	pubPose_.publish(msgPose);
+      else ROS_INFO("SUSPEND TILL %d", msg_seq);
 
 
       nav_msgs::Odometry msgOdometry;
